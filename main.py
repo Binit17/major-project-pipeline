@@ -35,7 +35,8 @@ class OCRPipeline:
         # sorted_boxes = sort_boxes(all_boxes)
         #! Here the boxes needs to be sorted later.
         # sorted_boxes = all_boxes
-        sorted_boxes = [box for sublist in all_boxes for box in sublist]
+        # sorted_boxes = [box for sublist in all_boxes for box in sublist]
+        sorted_boxes = sort_boxes([box for sublist in all_boxes for box in sublist])
 
 
         final_text = []
@@ -72,5 +73,5 @@ class OCRPipeline:
 
 if __name__ == "__main__":
     pipeline = OCRPipeline()
-    extracted_text = pipeline.process_image("test_images/try2.jpg")
+    extracted_text = pipeline.process_image("test_images/try1.jpg")
     print("Extracted Text:", extracted_text)

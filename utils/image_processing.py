@@ -222,3 +222,59 @@ def preprocess_image(image, target_size=(224, 224)):
 
     return image_rgb
 
+
+
+def updated_preprocess_image(image, target_size=(224, 224), crop_percentage=0.05):
+    """
+    Preprocess text image with manual border cropping and Otsu thresholding.
+
+    Parameters:
+        image (PIL.Image or numpy.ndarray): Input image.
+        target_size (tuple): Target size for resizing.
+        crop_percentage (float): Percentage to crop from all sides (0.05 = 5%)
+
+    Returns:
+        PIL.Image: The processed binarized image.
+    """
+    if isinstance(image, Image.Image):
+        image = np.array(image)
+
+    # Convert BGR to grayscale
+    if len(image.shape) == 3:
+        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        image_gray = image
+
+    # Resize while maintaining aspect ratio
+    image_pil = Image.fromarray(image_gray)
+    image_pil.thumbnail(target_size, Image.BILINEAR)
+    image_np = np.array(image_pil, dtype=np.uint8)
+    
+    # Apply manual percentage-based cropping
+    height, width = image_np.shape
+    crop_y = int(height * crop_percentage)
+    crop_x = int(width * crop_percentage)
+    
+    # Ensure we don't crop the entire image
+    if crop_y * 2 >= height or crop_x * 2 >= width:
+        crop_y = max(1, int(height * 0.05))
+        crop_x = max(1, int(width * 0.05))
+    
+    # Perform the crop
+    image_np = image_np[crop_y:height-crop_y, crop_x:width-crop_x]
+    
+    # Apply Otsu thresholding
+    _, image_binarized = cv2.threshold(image_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # Apply Morphological Opening to remove small noise dots
+    kernel = np.ones((2, 2), np.uint8)
+    image_binarized = cv2.morphologyEx(image_binarized, cv2.MORPH_CLOSE, kernel)
+
+    # Convert to PIL Image and pad to target size
+    image_pil = Image.fromarray(image_binarized)
+    image_padded = ImageOps.pad(image_pil, target_size, method=Image.Resampling.NEAREST, color=255)
+
+    # Convert to RGB with black text on white background
+    image_rgb = ImageOps.colorize(image_padded, black="black", white="white")
+
+    return image_rgb

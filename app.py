@@ -9,7 +9,7 @@ import os
 from models.yolo_detector import YOLODetector
 from models.resnet_classifier import ResNetClassifier
 from models.trocr_ocr import TrOCROCR
-from utils.image_processing import preprocess_image
+from utils.image_processing import preprocess_image, updated_preprocess_image
 from utils.box_sorting import sort_boxes
 
 # Define page configuration
@@ -81,7 +81,7 @@ class OCRPipeline:
         for i, box in enumerate(sorted_boxes):
             x1, y1, x2, y2 = map(int, box)
             cropped_region = orig_image.crop((x1, y1, x2, y2))
-            classifier_input = preprocess_image(cropped_region)
+            classifier_input = updated_preprocess_image(cropped_region)
 
             class_id, confidence = self.resnet_classifier.classify(classifier_input)
             classification_results.append((x1, y1, x2, y2, class_id, confidence))

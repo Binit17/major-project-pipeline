@@ -44,6 +44,13 @@ def load_models(device, cache_dir):
 # Define the device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Replace existing device check with:
+st.sidebar.code(f"""
+CUDA Available: {torch.cuda.is_available()}
+Device Name: {'CPU' if not torch.cuda.is_available() else torch.cuda.get_device_name(0)}
+PyTorch CUDA Version: {torch.version.cuda if torch.cuda.is_available() else 'N/A'}
+""")
+
 # Define a cache directory for models
 MODEL_CACHE_DIR = os.path.expanduser("models/trocr_models")
 
@@ -91,8 +98,10 @@ class OCRPipeline:
         sorted_boxes = sort_boxes([box for sublist in all_boxes for box in sublist])
         progress_bar.progress(40)
 
-        final_text = []
+        final_text = [''] * len(sorted_boxes)   # Placeholder for correct text position mapping 
         classification_results = []
+        valid_images = []  # Store images for batch processing
+        valid_indices = [] # Track positions of valid text regions
         draw = ImageDraw.Draw(img_with_boxes)
         
         status_text.text("Classifying text regions and performing OCR...")
@@ -106,14 +115,38 @@ class OCRPipeline:
             class_id, confidence = self.resnet_classifier.classify(classifier_input)
             classification_results.append((x1, y1, x2, y2, class_id, confidence))
 
-            if class_id == 0:  # If not strike-through text
-                ocr_text = self.trocr_ocr.recognize_text(cropped_region)
-                if ocr_text:  # Only append non-empty text
-                    final_text.append(ocr_text)
+            # THIS WORKS 
+            # if class_id == 0:  # If not strike-through text
+            #     ocr_text = self.trocr_ocr.recognize_text(cropped_region)
+            #     if ocr_text:  # Only append non-empty text
+            #         final_text.append(ocr_text)
             
-            # Update progress based on how many boxes we've processed
-            progress_value = 40 + (i / total_boxes) * 50
-            progress_bar.progress(int(progress_value))
+            # # Update progress based on how many boxes we've processed
+            # progress_value = 40 + (i / total_boxes) * 50
+            # progress_bar.progress(int(progress_value))
+            # THIS WORKS
+            
+            # TRYING BATCH PROCESSING
+            if class_id == 0:
+                valid_images.append(cropped_region)
+                valid_indices.append(i)  # Track position of valid text
+                # Defer OCR processing until after classification
+
+        # Batch process all valid images at once
+        if valid_images:
+            try:
+                batch_results = self.trocr_ocr.recognize_batch(valid_images)
+                # Map results back to their original positions
+                for idx, text in zip(valid_indices, batch_results):
+                    if text:  # Only keep non-empty results
+                        final_text[idx] = text
+            except RuntimeError as e:
+                st.error(f"Batch processing failed: {str(e)}")
+                return img_with_boxes, ""
+
+        # Filter out empty strings and join with spaces
+        cleaned_text = ' '.join([t for t in final_text if t])
+            # TRYING BATCH PROCESSING
 
         # Visualization
         for x1, y1, x2, y2, class_id, conf in classification_results:
@@ -125,8 +158,8 @@ class OCRPipeline:
         progress_bar.progress(100)
         status_text.text("Processing complete!")
         
-        full_text = ' '.join(final_text)
-        cleaned_text = re.sub(r'(\w)\.(\s*\w)', r'\1\2', full_text)  # Remove inter-word dots
+        # full_text = ' '.join(final_text)
+        cleaned_text = re.sub(r'(\w)\.(\s*\w)', r'\1\2', cleaned_text)  # Remove inter-word dots
         cleaned_text = re.sub(r'\s+\.\s+', ' ', cleaned_text)        # Remove floating dots
         # cleaned_text = re.sub(r'\b(\w+)\.', r'\1', cleaned_text)     # Remove word-ending dots
         

@@ -42,4 +42,11 @@ class TrOCROCR:
         raw_text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
         
         return raw_text
+    
+    
+    def recognize_batch(self, images):
+        """Batch process multiple images at once"""
+        pixel_values = self.processor(images=images, return_tensors="pt").pixel_values.to(self.device)
+        generated_ids = self.model.generate(pixel_values)
+        return self.processor.batch_decode(generated_ids, skip_special_tokens=True)
 

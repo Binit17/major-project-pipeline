@@ -250,18 +250,18 @@ def updated_preprocess_image(image, target_size=(224, 224), crop_percentage=0.05
     image_pil.thumbnail(target_size, Image.BILINEAR)
     image_np = np.array(image_pil, dtype=np.uint8)
     
-    # Apply manual percentage-based cropping
-    height, width = image_np.shape
-    crop_y = int(height * crop_percentage)
-    crop_x = int(width * crop_percentage)
+    # # Apply manual percentage-based cropping
+    # height, width = image_np.shape
+    # crop_y = int(height * crop_percentage)
+    # crop_x = int(width * crop_percentage)
     
-    # Ensure we don't crop the entire image
-    if crop_y * 2 >= height or crop_x * 2 >= width:
-        crop_y = max(1, int(height * 0.05))
-        crop_x = max(1, int(width * 0.05))
+    # # Ensure we don't crop the entire image
+    # if crop_y * 2 >= height or crop_x * 2 >= width:
+    #     crop_y = max(1, int(height * 0.05))
+    #     crop_x = max(1, int(width * 0.05))
     
-    # Perform the crop
-    image_np = image_np[crop_y:height-crop_y, crop_x:width-crop_x]
+    # # Perform the crop
+    # image_np = image_np[crop_y:height-crop_y, crop_x:width-crop_x]
     
     # Apply Otsu thresholding
     _, image_binarized = cv2.threshold(image_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)

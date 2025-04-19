@@ -4,4 +4,8 @@ __pycache__
 text_regions
 *.pth
 *.pt
-
+Dataset/
+Dataset.zip
+test_images
+models/
+trocr_models

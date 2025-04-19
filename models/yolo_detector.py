@@ -6,11 +6,25 @@ from PIL import Image, ImageDraw
 
 class YOLODetector:
     def __init__(self, model_path='models/yolo.pt'):
+        # Initialize the YOLO model
         self.model = YOLO(model_path)
+        
+        # Check for GPU availability and move model to GPU
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            self.model.to('cuda')
+            print(f"YOLOv8 using GPU: {torch.cuda.get_device_name(0)}")
+        else:
+            print("YOLOv8 using CPU")
 
     def detect_text(self, image):
-        """Detect text regions in an image"""
-        results = self.model.predict(image)
+        """Detect text regions in an image with GPU acceleration"""
+        # Free up GPU memory before detection
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            
+        # Explicitly specify device for prediction
+        results = self.model.predict(image, device=self.device)
         boxes = [box.xyxy.cpu().numpy() for result in results for box in result.boxes]
         return boxes
 
@@ -27,8 +41,3 @@ class YOLODetector:
 
         image.save(output_path)
         image.show()  # Show the image with bounding boxes
-
-#! Uncomment following code to test this individual class.
-if __name__ == "__main__":
-    detector = YOLODetector()
-    detector.draw_bounding_boxes("../test_images/try2.jpg", "output.jpg")
